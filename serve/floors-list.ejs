@@ -1,0 +1,69 @@
+<div class="full-height">
+    <span></span>
+    <%- include('image-container', {content: 'add-floor-image', classes: 'pointer-cursor'}) %>
+    
+    <script>
+        var addfloorinput = $('input:last');
+        
+        var postfloor = function() {
+            console.log("submit event");
+            var fd = new FormData();
+            fd.append("add-floor", addfloorinput[0].files[0], addfloorinput.attr("data-filename"));
+            $.ajax({
+                url: "/floors/",
+                type: "POST",
+                data: fd,
+                enctype: 'multipart/form-data',
+                processData: false,  // tell jQuery not to process the data
+                contentType: false   // tell jQuery not to set contentType
+            });
+            return false;
+        }
+    
+        addfloorinput.change(function(){
+            if (addfloorinput.val())
+                postfloor();
+        });
+        
+    </script>
+</div>
+
+<script>
+    var floorslistdiv = $('span:last');
+    context['_changed'](function(event){
+        if (event.key != 'floors')
+            return;
+        var floorscontents = event.value;
+        
+        floorscontents =
+        Lazy(floorscontents)
+            /*.concat({content: 'add-floor-image', classes: 'pointer-cursor'})*/;
+        
+        var floorslistitems = [];    
+             
+        var floorslistitemspromises =    
+            floorscontents
+                .map(
+                    function(floorcontent, floorid){
+                        return Promise.resolve(
+                                $.ajax({
+                                    type: "GET",
+                                    url: "image-container",
+                                    data: {content: 'floor-list-item-image', id: floorcontent, index: floorid}
+                                }))
+                                .then(function(listitem){
+                                    floorslistitems[floorid] = listitem;
+                                });
+                });
+        
+        Promise.all(
+            floorslistitemspromises.toArray())
+        .then(function(){
+            floorslistdiv.html('');
+            Lazy(floorslistitems)
+                .each(function(listitem){
+                    floorslistdiv.append(listitem);
+                });
+            });
+    });
+</script>

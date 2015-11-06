@@ -1,0 +1,31 @@
+<div class="full-height">
+    <div class="vertical-center full-width row">
+    </div>
+</div>
+
+<script>
+    var currentfloordiv = $('.row:last');
+    context['_changed'](function(event){
+        if (event.key != 'current')
+            return;
+        var currentid = event.value;console.log(currentid);
+        
+        var loadcurrentfloor = function(floorcontent){
+            Promise.resolve(
+            $.ajax({
+                type: "GET",
+                url: "image-container",
+                data: floorcontent
+            }))
+            .then(function(floor){
+                console.log('loaded',floor);
+                currentfloordiv.html(floor);
+            });
+        };
+        
+        if (context.floors[currentid])
+            loadcurrentfloor({content: 'floor-items-div', id: context.floors[currentid]});
+        else 
+            loadcurrentfloor({content: 'empty'});
+    });
+</script>
