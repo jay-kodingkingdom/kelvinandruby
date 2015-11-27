@@ -1,0 +1,99 @@
+<div class="modal fade full-width full-height" tabindex="-1" role="dialog">
+    <div class="modal-dialog full-width full-height" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <button type="button" class="close" data-dismiss="modal"><span>&times;</span></button>
+                <h4 class="modal-title"></h4>
+            </div>
+            <div class="modal-body">
+            </div>
+        </div>
+    </div>
+</div>
+
+<%
+    var generateUUID = function(){
+        var d = new Date().getTime();
+        var uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+            var r = (d + Math.random()*16)%16 | 0;
+            d = Math.floor(d/16);
+            return (c=='x' ? r : (r&0x3|0x8)).toString(16);
+        });
+        return uuid;
+    };
+%>
+
+<%
+    var scriptid = generateUUID();
+%>
+
+<script id="<%= scriptid %>">
+	
+	var swap = function( elem, options, callback ) {
+	    var old = {};
+	    for ( var name in options ) {
+	        old[ name ] = elem.style[ name ];
+	        elem.style[ name ] = options[ name ];
+	    }       
+	    callback( elem );
+	    for ( var name in options ){
+	        elem.style[ name ] = old[ name ];
+	    }
+	};
+	
+    var findbox = function(element){
+        var box = {};
+        
+        if (element[0].getBBox) {
+            box.width = element[0].getBoundingClientRect().width;
+            box.height = element[0].getBoundingClientRect().height;}
+        else {
+            var swapcss = { position: "absolute", visibility: "hidden", display: "block" };
+            
+            swap(element[0], swapcss, function(swapelement){
+                box.width = swapelement.getBoundingClientRect().width;
+                box.height = swapelement.getBoundingClientRect().height;
+            });}
+        
+        return box;
+    }
+
+    var modaldiv = $('#'+<%- JSON.stringify(scriptid) %>).prevAll('.modal:first');
+    var modalcontent = modaldiv.find('.modal-content');
+    var modaltitle = modaldiv.find('.modal-title');
+    var modalbody = modaldiv.find('.modal-body');
+    context._changed(function(event){
+        if (event.key !== 'modal')
+            return;
+        var modalhost = event.value;
+        if (modalhost && modalhost[0] && modalhost[0].nodeType){
+            console.log(modalhost);
+            var offset = modalhost.offset();
+            var modalhostbox = findbox(modalhost);
+            modalcontent.css('width', modalhostbox.width);
+            var modalcontentbox = findbox(modalcontent);
+            console.log('found all boxes');
+            
+            if ( ($(document).width() - offset.left) * 0.8 < modalcontentbox.width)
+                modalcontent.css('left', $(document).width() - modalcontentbox.width / 0.8 );
+            else
+                modalcontent.css('left', offset.left);
+            if ( ($(document).height() - offset.top) * 0.8 < modalcontentbox.height)
+                modalcontent.css('top', $(document).height() - modalcontentbox.height / 0.8 );
+            else
+                modalcontent.css('top', offset.top);
+            modaldiv.modal('show');}
+    });
+    context._changed(function(event){
+        if (event.key !== 'modal-title')
+            return;
+        var modaltitlevalue = event.value;
+        modaltitle.html(modaltitlevalue);
+    });
+    context._changed(function(event){
+        if (event.key !== 'modal-body')
+            return;
+        var modalbodyvalue = event.value;
+        modalbody.html(modalbodyvalue);
+    });
+</script>

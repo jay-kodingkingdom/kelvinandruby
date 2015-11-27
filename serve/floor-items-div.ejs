@@ -1,4 +1,342 @@
 <%
+    var generateUUID = function(){
+        var d = new Date().getTime();
+        var uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+            var r = (d + Math.random()*16)%16 | 0;
+            d = Math.floor(d/16);
+            return (c=='x' ? r : (r&0x3|0x8)).toString(16);
+        });
+        return uuid;
+    };
+%>
+
+<div class="position-absolute top-hook full-width">
+     <div class="row">
+         <div class="col-sm-12">
+            <div class="btn-group" role="group">
+                <button type="button" class="btn btn-default add-item">Add Item</button>
+                <button type="button" class="btn btn-default create-item">Create Item</button>
+                <button type="button" class="btn btn-default discard-item">Discard Item</button>
+                <button type="button" class="btn btn-default delete-item">Delete Item</button>
+                <button type="button" class="btn btn-default delete-floor">Delete Floor</button>
+            </div>
+         </div>
+     </div>
+</div>
+
+<%
+    var scriptid = generateUUID();
+%>
+
+<script id="<%= scriptid %>">
+    var buttongroup = $('#'+<%- JSON.stringify(scriptid) %>).prevAll('div:first').find('.btn-group');
+    var button = $('#'+<%- JSON.stringify(scriptid) %>).prevAll('div:first').find('button');
+    var buttoncontext = littlecontexticater({}, littlecontext);
+    
+    buttoncontext._changing(function(event){
+        if (event.key !== 'state')
+            return;
+        button.hide();
+    });
+    buttoncontext._changed(function(event){
+        if (event.key !== 'state')
+            return;
+        var state = event.value;
+        
+        Lazy(state).each(function(state){
+            button.filter('.'+state).show();
+        });
+    });
+
+//////////////////////////////////////////////////
+
+
+    buttongroup.on('click','.add-item',function(){
+        buttoncontext.var('state', ['create-item', 'discard-item']);
+    });
+    buttongroup.on('click','.discard-item',function(){
+        buttoncontext.var('state', ['add-item','delete-floor']);
+    });
+    buttongroup.on('click','.create-item',function(){
+        if (context['new-item'].length > 2){
+            createitem();
+            buttoncontext.var('state', ['add-item','delete-floor']);}
+    });
+    
+    buttongroup.on('click','.delete-item',function(){
+        deleteitem();
+        buttoncontext.var('state', ['add-item','delete-floor']);
+    });
+    
+    buttongroup.on('click','.delete-floor',function(){
+        buttoncontext.var('state', [])
+            .then(deletefloor);
+    });
+    
+/////////////////////////////////////////////////////
+
+    buttoncontext._changed(function(event){
+        if (event.key !== 'state')
+            return;
+        var state = event.value;
+        
+        if (Lazy(state).contains('create-item')){
+            context.var('new-item', [])
+                .then(window.tracknewitem);}
+    });
+    buttoncontext._changing(function(event){
+        if (event.key !== 'state')
+            return;
+        var state = buttoncontext.state;
+            
+        if (Lazy(state).contains('create-item')){console.log('untrack from create');
+            window.untrack();
+            context.var('new-item', []);}
+    });
+            
+    buttoncontext._changed(function(event){
+        if (event.key !== 'state')
+            return;
+        var state = event.value;
+        
+        if (Lazy(state).contains('add-item')){
+            window.trackselectitem();}
+    });
+    buttoncontext._changing(function(event){
+        if (event.key !== 'state')
+            return;
+        var state = buttoncontext.state;
+        
+        if (Lazy(state).contains('add-item')){console.log('untrack from select');
+            window.untrack();}
+    });
+    
+</script>
+
+<%
     var filepath = '/floors/' + id;
 %>
-<img src="<%- filepath %>" class="embed-responsive-item pointer-cursor">
+
+<div class="full-width full-height embed-responsive embed-responsive-16by9">
+
+    <img src="<%- filepath %>" class="embed-responsive-item">
+    
+    <svg viewBox="0 0 1000 1000" preserveAspectRatio="none" class="embed-responsive-item current-items click-through">
+        <%
+            for (var itemid in items){
+                var item = items[itemid];
+                %>
+            <polygon points="<%= require('lazy.js')(item).map(function(point){return point.x + ',' + point.y;}).toArray().join(' ') %>" class="floor-item pointer-cursor" data-itemid="<%- itemid %>"/>
+                <% 
+            }
+        %>
+    </svg>
+    
+    <svg viewBox="0 0 1000 1000" preserveAspectRatio="none" class="embed-responsive-item new-item click-through"></svg>
+    <svg viewBox="0 0 1000 1000" preserveAspectRatio="none" class="embed-responsive-item click-box pointer-cursor"></svg>
+    
+</div>
+    
+<script>
+    (function(){
+        window.createitem = function(){
+            var loadcurrentfloor = function(url, data){
+                console.log('adding item', {newitem: context['new-item'], template: url, content: data});
+                socket.emit('loadfloor'
+                    , 
+                    {
+                        newitem: context['new-item'],
+                        template: url,
+                        content: data
+                    });
+            };
+            loadcurrentfloor('floor-items-div', {id: context.floors[context.current]});
+        };
+    })();
+</script>
+    
+<script>
+    (function(){
+        window.deleteitem = function(){
+            var loadcurrentfloor = function(url, data){
+                console.log('removing item', {deleteitem: context.itemid, template: url, content: data});
+                socket.emit('loadfloor'
+                    , 
+                    {
+                        deleteitem: context.itemid,
+                        template: url,
+                        content: data
+                    });
+            };
+            loadcurrentfloor('floor-items-div', {id: context.floors[context.current]});
+        };
+    })();
+</script>
+    
+<script>
+    (function(){
+        window.deletefloor = function(){
+            var loadcurrentfloor = function(url, data){
+                console.log('suicide', {suicide: true, template: url, content: data});
+                socket.emit('loadfloor'
+                    , 
+                    {
+                        suicide: true,
+                        template: url,
+                        content: data
+                    });
+            };
+            loadcurrentfloor('floor-items-div', {id: context.floors[context.current]});
+        };
+    })();
+</script>
+    
+<%
+    var scriptid = generateUUID();
+%>
+        
+<script id="<%= scriptid %>">
+    (function(){
+        var pointinsideitem = function(point, item){
+            var pointleftofside = function(point, side){
+                if (!   (
+                        side[0].y <= point.y && point.y <= side[1].y ||
+                        side[1].y <= point.y && point.y <= side[0].y)   ||
+                    side[0].y === side[1].y)
+                    return false;
+                
+                var horizontalidenticalpoint = 
+                    {
+                        x: (side[0].x-side[1].x)/(side[0].y-side[1].y) * (point.y-side[0].y) + side[0].x,
+                        y: point.y
+                    };
+                    
+                return horizontalidenticalpoint.x >= point.x;
+            };
+            var windingnumberof = function(side){
+                //optimized for pointleftofside taking care of same y and all other 0s
+                if (side[1].y > side[0].y)
+                    return 1;
+                else
+                    return -1;
+            };
+            
+            var windingnumber = 0;
+            for (var sidenumber = 0; sidenumber < item.length; sidenumber++) {
+                var side = [item[sidenumber], item[(sidenumber + 1) % item.length]];
+                
+                if (pointleftofside(point, side))
+                    windingnumber += windingnumberof(side);
+            }
+            
+            return windingnumber !== 0;
+        };
+    
+        window.trackselectitem = function(){
+            var floorcontainer = $('#'+<%- JSON.stringify(scriptid) %>).prevAll('div:first');
+            var clickbox = floorcontainer.find('.click-box');
+            
+            console.log('trackselect');
+            clickbox.click(function(click){console.log('click in trackselect');
+                var offset = clickbox.offset();
+                
+                var point = {x: undefined, y: undefined};
+                
+                point.x = (click.pageX - offset.left) / clickbox.width() * 1000;
+                point.y = (click.pageY - offset.top) / clickbox.height() * 1000;
+                
+                var items = <%- JSON.stringify(items) %>;
+                
+                var done = false;
+                
+                var reverseitems = [];
+                Lazy(items).each( function(item, itemid){
+                    reverseitems.push({item: item, itemid: itemid});
+                });
+                Lazy(reverseitems).reverse()
+                    .each( function(something){
+                        var item = something.item;
+                        var itemid = something.itemid;
+                        if (!done && pointinsideitem (point, item)){
+                            console.log('clicked item ', itemid);
+                            context.var('itemid', itemid)
+                                .then(function(){
+                            buttoncontext.var('state', ['add-item', 'delete-item']);
+                            });
+                            done = true;}
+                    });
+                
+                return false;
+            });
+        };
+    })();
+</script>
+
+<%
+    var scriptid = generateUUID();
+%>
+
+<script id="<%= scriptid %>">
+    (function (){
+        
+        context._changed(function(event){
+            if (event.key !== 'new-item')
+                return;
+            var newitemvalue = event.value;
+            
+            var floorcontainer = $('#'+<%- JSON.stringify(scriptid) %>).prevAll('div:first');
+            var flooritems = floorcontainer.find('.new-item');
+            var newflooritem = $(flooritems.find('polygon')[0] || '<polygon points="" class="floor-item" />');
+                    
+            console.log('redraw');
+            newflooritem.attr('points',
+                Lazy(newitemvalue).reduce(function(pointsattr, point){return pointsattr + ' ' + point.x + ',' + point.y;}, ''));
+            floorcontainer.html(floorcontainer.html());
+        });
+        
+        window.tracknewitem = function(){
+            var floorcontainer = $('#'+<%- JSON.stringify(scriptid) %>).prevAll('div:first');
+            var flooritems = floorcontainer.find('.new-item');
+            var newflooritem = $(flooritems.find('polygon')[0] || '<polygon points="" class="floor-item" />');
+            var clickbox = floorcontainer.find('.click-box');
+        
+            flooritems.append(newflooritem);
+            console.log('track');
+            clickbox.click(function(click){console.log('click');
+                var offset = clickbox.offset();
+                var pointx = (click.pageX - offset.left) / clickbox.width() * 1000;
+                var pointy = (click.pageY - offset.top) / clickbox.height() * 1000;
+                
+                if (pointx > 0 && pointx < 1000
+                    && pointy > 0 && pointy < 1000){
+                    
+                    context['new-item'].push({x: pointx, y: pointy});
+                    
+                    var updatednewitem = context['new-item'];
+                    
+                    console.log('new item update from click');
+                    context.var('new-item', updatednewitem)
+                        .then(function(){
+                            setTimeout(tracknewitem, 200);
+                        });
+                    
+                    return false;
+                    }
+            });
+        };
+        
+        window.untrack = function(){
+            console.log('untrack');
+            var floorcontainer = $('#'+<%- JSON.stringify(scriptid) %>).prevAll('div:first');
+            var clickbox = floorcontainer.find('.click-box');
+            
+            clickbox.off('click');
+        };
+    })();
+</script>
+
+<script>
+    (function(){
+        buttoncontext.var('state', ['add-item','delete-floor']);
+    })();
+</script>

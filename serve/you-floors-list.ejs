@@ -1,31 +1,5 @@
 <div class="full-height">
     <span></span>
-    <%- include('image-container', {content: 'add-floor-image', classes: 'pointer-cursor'}) %>
-    
-    <script>
-        var addfloorinput = $('input:last');
-        
-        var postfloor = function() {
-            console.log("submit event");
-            var fd = new FormData();
-            fd.append("add-floor", addfloorinput[0].files[0], addfloorinput.attr("data-filename"));
-            $.ajax({
-                url: "/floors/",
-                type: "POST",
-                data: fd,
-                enctype: 'multipart/form-data',
-                processData: false,  // tell jQuery not to process the data
-                contentType: false   // tell jQuery not to set contentType
-            });
-            return false;
-        }
-    
-        addfloorinput.change(function(){
-            if (addfloorinput.val())
-                postfloor();
-        });
-        
-    </script>
 </div>
 
 <script>
@@ -56,6 +30,7 @@
                                 });
                 });
         
+        
         Promise.all(
             floorslistitemspromises.toArray())
         .then(function(){
@@ -64,6 +39,9 @@
                 .each(function(listitem){
                     floorslistdiv.append(listitem);
                 });
-            });
+            })
+        .then(function(){
+            $('img:first').trigger('click');
+        });
     });
 </script>

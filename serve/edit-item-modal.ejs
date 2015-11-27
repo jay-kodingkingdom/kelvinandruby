@@ -1,0 +1,48 @@
+<script>
+    var tracksavename = function(itemid){
+        var nameinput = $('.item-name-group').find('input');
+        var editnamebutton = $('.item-name-group').find('button');
+        
+        editnamebutton.click(function(){
+            var savename = nameinput.attr('readonly');
+            savename = !savename;
+            nameinput.attr('readonly', savename);
+            if (savename){
+                var loadcurrentfloor = function(url, data){
+                    console.log('saving item name', {savename: {from: itemid, to: nameinput.val()}, template: url, content: data});
+                    socket.emit('loadfloor'
+                        , 
+                        {
+                            savename: {from: itemid, to: nameinput.val()},
+                            template: url,
+                            content: data
+                        });
+                };
+                loadcurrentfloor('floor-items-div', {id: context.floors[context.current]});
+            }
+        });
+    };
+    
+    context._changed(function(event){
+        if (event.key !== 'itemid')
+            return;
+        var itemid = event.value;
+        context.var('modal-title', $('#item-name-title').html())
+            .then(function(){
+        $('.item-name-group').find('input').val(itemid);
+        tracksavename(itemid);
+        context.var('modal', $('polygon[data-itemid='+JSON.stringify(itemid)+']'))
+            });
+    });
+    
+</script>
+
+
+<script type="text/html" id="item-name-title">
+    <h2 class="input-group input-group-lg item-name-group">
+        <input class="form-control item-name" type="text" class="form-control" placeholder="Item Name" readonly>
+        <span class="input-group-addon">
+            <button class="edit-btn"><span class="glyphicon glyphicon-edit"></span></button>
+        </span>
+    </h2>
+</script>

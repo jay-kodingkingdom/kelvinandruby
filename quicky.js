@@ -49,11 +49,22 @@ everything.upload = function(app){
     app.use(require('connect-busboy')());
 };
 
+
+everything.deletefloor = function(floorid){
+    everything.context.var(floorid, undefined)
+        .catch(function(err){
+    console.log('RED LIGHTS!!!', err);
+        });
+};
 everything.addfloor = function(floorid, filepath){
     var floorcontent = 
     {
         content: 'floor-li-image',
-        filepath: filepath
+        filepath: filepath,
+        items: 
+        {
+            Everything: [{x: 0, y: 0},{x: 0, y: 1000},{x: 1000, y: 1000},{x: 1000, y: 0}]
+        }
     };
     everything.context.var(floorid, floorcontent)
         .catch(function(err){
@@ -107,33 +118,6 @@ everything.postfloor = function(app){
         req.pipe(req.busboy);
     });
 };
-everything.deletefloor = function(app){
-    app.put('/:id', function(req, res){
-        console.log('recieved put practice');
-        console.log(req.body);
-        try{
-            var practice = req.body;
-            everything.practices[req.params.id] = practice;
-            var response = {};
-            response.id = req.params.id;
-            response.message = 'Success';
-            response.url = req.protocol + '://' + req.get('host') + '/practice/' + response.id;
-            res.json(response);console.log(everything.practices[req.params.id]);
-        }
-        catch(err){
-            res.status(400).json({ message: 'Error'});
-        }
-    });
-};
-everything.getpractice = function(app){
-    app.get('/:id', function(req, res, next){
-        console.log('getting practice');
-        if (! everything.practices[req.params.id]){console.log('practice not found');
-            next();}
-        else{console.log('practice discovered');
-            res.json(everything.practices[req.params.id]);}
-    });
-};
 
 
 everything.serve = function(app){
@@ -164,7 +148,7 @@ everything.serve = function(app){
 everything.done = function(app){
     app.all('*', function (req, res, next) {
         console.log('processing unhandled request');
-        res.redirect('/change');
+        res.redirect('/you');
         //res.status(404).end();
     });
 };
@@ -197,20 +181,155 @@ everything.socket = function(){
         
         var emitfloors = function(){
             console.log('hey emitting');
-            everything.context._all().then(function(floorssequence){
-                var floorsids = floorssequence.keys().toArray();
+            everything.context._all()
+            .then(function(floorssequence){
+                var floorsids = floorssequence
+                    .filter(function(floor){ return floor.value;})
+                    .keys().without('comments').toArray();
                 console.log('hey emitting now', floorsids);
                 socket.emit('floors', floorsids);
             })
                 .catch(function(err){
-            console.log('RED LIGHTS!!!', err);
+            console.log('Error!', err);
                 });
+        };
+        
+        var servefloorinfo = function(){
+            var ejs = require('ejs');
+            var fs = require("fs");
+            
+            var sendfloorinfo = function(floorinfo){console.log('tried to send floor info');
+                socket.emit('loadedfloor', floorinfo);
+            };
+            
+            socket.on('loadfloor', function(floorinfo){console.log(floorinfo, 'recieved loadfloor');
+                try {
+                    console.log(__dirname + '/serve/' + floorinfo.template +'.ejs', 'loading floor conscious ', !!floorinfo.content.id);
+                    
+                    if (floorinfo.content.id)
+                        everything.context[''](floorinfo.content.id)
+                            .then(function(floorcontent){
+                                
+                        floorinfo.content.items = floorcontent.items;
+                               
+                        if (floorinfo.newitem){console.log('processing newitem');
+                            var itemidtry = 0;
+                            var itemid = "Item " + (+Object.keys(floorcontent.items).length + itemidtry);
+                            while (floorcontent.items[itemid]){
+                                itemidtry++;
+                                itemid = "Item " + (+Object.keys(floorcontent.items).length + itemidtry);
+                            }
+                            floorcontent.items[itemid] = floorinfo.newitem;
+                            floorinfo.content.items = floorcontent.items;
+                            
+                            console.log(floorcontent, 'floorcontent again');
+                            
+                            everything.context.var(floorinfo.content.id, floorcontent)
+                                .then(function(){
+                                    
+                            console.log('going to send fllor');
+                            floorinfo.content.require = require;
+                            sendfloorinfo(
+                                ejs.render(fs.readFileSync(__dirname + '/serve/' + floorinfo.template +'.ejs', "utf8"), floorinfo.content));
+                                });}
+                        
+                        else if (floorinfo.deleteitem){console.log('processing delitem');
+                            
+                            floorcontent.items[floorinfo.deleteitem] = undefined;
+                            floorinfo.content.items = floorcontent.items;
+                            
+                            console.log(floorcontent, 'floorcontent again');
+                            
+                            everything.context.var(floorinfo.content.id, floorcontent)
+                                .then(function(){
+                                    
+                            console.log('going to send fllor');
+                            floorinfo.content.require = require;
+                            sendfloorinfo(
+                                ejs.render(fs.readFileSync(__dirname + '/serve/' + floorinfo.template +'.ejs', "utf8"), floorinfo.content));
+                                });}
+                        
+                        else if (floorinfo.savename){console.log('processing saveitemname');
+                            
+                            var itemname = floorinfo.savename;
+                            floorcontent.items[itemname.to] = floorcontent.items[itemname.from];
+                            floorcontent.items[itemname.from] = undefined;
+                            floorinfo.content.items = floorcontent.items;
+                            
+                            console.log(floorcontent, 'floorcontent again');
+                            
+                            everything.context.var(floorinfo.content.id, floorcontent)
+                                .then(function(){
+                                    
+                            console.log('going to send fllor');
+                            floorinfo.content.require = require;
+                            sendfloorinfo(
+                                ejs.render(fs.readFileSync(__dirname + '/serve/' + floorinfo.template +'.ejs', "utf8"), floorinfo.content));
+                                });}
+                                
+                        else if (floorinfo.suicide){console.log('processing suicide');
+                            
+                            everything.deletefloor(floorinfo.content.id)
+                            
+                            sendfloorinfo(
+                                    '<div class="embed-responsive embed-responsive-16by9 border"></div>'
+                            );}
+                                
+                        else if (floorinfo.comment){console.log('processing comment');
+                            
+                            var addcomment = function(comments){
+                                var comment = floorinfo.comment;
+                                comment.time = Date();
+                                comments.push(comment)
+                                
+                                everything.context.var('comments', comments);
+                                
+                                console.log('comments now',comments);
+                            };
+                            
+                            everything.context['']('comments')
+                                .then(addcomment)
+                                .catch(function(err){
+                            if (err !== null)
+                                console.log('ERRORRRRR!!!', err);
+                            else
+                                everything.context.var('comments',[])
+                                    .then(function(){
+                            everything.context['']('comments')
+                                .then(addcomment)
+                                    });
+                                });
+                            
+                            }
+                        
+                        else{
+                            console.log('going to send fllor');
+                            floorinfo.content.require = require;
+                            sendfloorinfo(
+                                ejs.render(fs.readFileSync(__dirname + '/serve/' + floorinfo.template +'.ejs', "utf8"), floorinfo.content));} 
+                            });
+                            
+                    else
+                        sendfloorinfo(
+                                '<div class="embed-responsive embed-responsive-16by9 border"></div>'
+                            );
+                }
+                catch(e){
+                    var stacktrace = function() {
+                        var err = new Error();
+                        return err.stack;
+                    };
+                    console.log('red lights',e, stacktrace());
+                }
+            });
         };
         
         emitfloors();
         
         everything.context
             ._changed(emitfloors);
+            
+        servefloorinfo();
         
         socket.on('disconnect', function(){
             console.log('user disconnected');
@@ -224,7 +343,7 @@ everything.contexting = function(){
     
     var datajs = require('./data.js');
     
-    var data = new datajs ('./heywhereami');
+    var data = new datajs (everything.context, './floors');
     
     require('./dataer.js')(everything.context, data);
 };

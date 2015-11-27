@@ -1,0 +1,19 @@
+<script src="/socket.io.js"></script>
+<script>
+    var context = littlecontexticater({floors: [], current: -1}, littlecontext);
+    var socket = io();
+    socket.on('floors', function (data) {
+        console.log(data, arguments);
+        context['var']('floors', data);
+        context['var']('current', context.current);
+    });
+</script>
+
+<%- include('dynamic-modal') %>
+<%- include('comment-item-modal') %>
+
+<div class="row full-height">
+    <%- include('pane', {width: 3, content: 'you-floors-list'}) %>
+    
+    <%- include('pane', {width: 9, content: 'you-floor-items'}) %>
+</div>

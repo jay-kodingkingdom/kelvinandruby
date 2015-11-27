@@ -1,51 +1,71 @@
-.border{
-    border: 1px red solid;
-}
+.border {
+  /*border: 1px silver solid;*/
 
+}
 .logo {
-    background:url(logo.png); 
-    height: 100%;
-    width: 100%;
+  background: url(logo.png);
+  height: 100%;
+  width: 100%;
 }
-
 .vertical-center {
-    display: block;
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
+  display: block;
+  position: absolute;
+  top: 50%;
+  transform: translatey(-50%);
+  -webkit-transform: translatey(-50%);
 }
-
 .centered {
-    text-align: center !important;
+  text-align: center !important;
 }
 .lefted {
-    text-align: left !important;
+  text-align: left !important;
 }
 .content-limit {
-     height: 380px !important;
+  height: 380px !important;
 }
 .full-width {
-    width: 100% !important;
+  width: 100% !important;
 }
-
 .full-height {
-    height: 100% !important;
+  height: 100% !important;
 }
 .click-through {
-    pointer-events: none;
+  pointer-events: none;
+}
+body {
+  background-color: #000000;
 }
 .pane {
-    background-color: rgba(0, 0, 0, 1);
+  background-color: #000000;
 }
 .big-font {
-    font-size: 5em;
+  font-size: 5em;
 }
 .pointer-cursor {
-    cursor: pointer;
+  cursor: pointer;
 }
 .display-none {
-    display: none !important;
+  display: none !important;
 }
 .position-absolute {
-    position: absolute;
+  position: absolute;
+}
+.floor-item {
+  fill: none;
+  stroke: black;
+  stroke-width: 9;
+}
+.top-hook {
+  transform: translatey(-100%);
+  -webkit-transform: translatey(-100%);
+}
+.modal {
+  position: absolute !important;
+}
+.modal-content {
+  max-width: 600px;
+  min-width: 200px;
+}
+.break-width {
+  max-width: 100% !important;
 }

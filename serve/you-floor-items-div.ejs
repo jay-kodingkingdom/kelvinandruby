@@ -1,0 +1,121 @@
+<%
+    var generateUUID = function(){
+        var d = new Date().getTime();
+        var uuid = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+            var r = (d + Math.random()*16)%16 | 0;
+            d = Math.floor(d/16);
+            return (c=='x' ? r : (r&0x3|0x8)).toString(16);
+        });
+        return uuid;
+    };
+%>
+
+<%
+    var filepath = '/floors/' + id;
+%>
+
+<div class="full-width full-height embed-responsive embed-responsive-16by9">
+
+    <img src="<%- filepath %>" class="embed-responsive-item">
+    
+    <svg viewBox="0 0 1000 1000" preserveAspectRatio="none" class="embed-responsive-item current-items click-through">
+        <%
+            for (var itemid in items){
+                var item = items[itemid];
+                %>
+            <polygon points="<%= require('lazy.js')(item).map(function(point){return point.x + ',' + point.y;}).toArray().join(' ') %>" class="floor-item pointer-cursor" data-itemid="<%- itemid %>"/>
+                <% 
+            }
+        %>
+    </svg>
+    
+    <svg viewBox="0 0 1000 1000" preserveAspectRatio="none" class="embed-responsive-item click-box pointer-cursor"></svg>
+    
+</div>
+    
+<%
+    var scriptid = generateUUID();
+%>
+        
+<script id="<%= scriptid %>">
+    (function(){
+        var pointinsideitem = function(point, item){
+            var pointleftofside = function(point, side){
+                if (!   (
+                        side[0].y <= point.y && point.y <= side[1].y ||
+                        side[1].y <= point.y && point.y <= side[0].y)   ||
+                    side[0].y === side[1].y)
+                    return false;
+                
+                var horizontalidenticalpoint = 
+                    {
+                        x: (side[0].x-side[1].x)/(side[0].y-side[1].y) * (point.y-side[0].y) + side[0].x,
+                        y: point.y
+                    };
+                    
+                return horizontalidenticalpoint.x >= point.x;
+            };
+            var windingnumberof = function(side){
+                //optimized for pointleftofside taking care of same y and all other 0s
+                if (side[1].y > side[0].y)
+                    return 1;
+                else
+                    return -1;
+            };
+            
+            var windingnumber = 0;
+            for (var sidenumber = 0; sidenumber < item.length; sidenumber++) {
+                var side = [item[sidenumber], item[(sidenumber + 1) % item.length]];
+                
+                if (pointleftofside(point, side))
+                    windingnumber += windingnumberof(side);
+            }
+            
+            return windingnumber !== 0;
+        };
+    
+        window.trackselectitem = function(){
+            var floorcontainer = $('#'+<%- JSON.stringify(scriptid) %>).prevAll('div:first');
+            var clickbox = floorcontainer.find('.click-box');
+            
+            console.log('trackselect');
+            clickbox.click(function(click){console.log('click in trackselect');
+                var offset = clickbox.offset();
+                
+                var point = {x: undefined, y: undefined};
+                
+                point.x = (click.pageX - offset.left) / clickbox.width() * 1000;
+                point.y = (click.pageY - offset.top) / clickbox.height() * 1000;
+                
+                var items = <%- JSON.stringify(items) %>;
+                
+                var done = false;
+                
+                var reverseitems = [];
+                Lazy(items).each( function(item, itemid){
+                    reverseitems.push({item: item, itemid: itemid});
+                });
+                Lazy(reverseitems).reverse()
+                    .each( function(something){
+                        var item = something.item;
+                        var itemid = something.itemid;
+                        if (!done && pointinsideitem (point, item)){
+                            console.log('clicked item ', itemid);
+                            context.var('click', click);
+                            context.var('itemid', itemid);
+                            done = true;}
+                    });
+                
+                return false;
+            });
+        };
+    })();
+</script>
+
+<%
+    var scriptid = generateUUID();
+%>
+
+<script>
+    trackselectitem();
+</script>

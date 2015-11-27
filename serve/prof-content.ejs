@@ -8,8 +8,12 @@
         context['var']('current', context.current);
     });
 </script>
+
+<%- include('dynamic-modal') %>
+<%- include('prof-comment-item-modal') %>
+
 <div class="row full-height">
-    <%- include('pane', {width: 3, content: 'floors-list'}) %>
+    <%- include('pane', {width: 3, content: 'you-floors-list'}) %>
     
-    <%- include('pane', {width: 9, content: 'floor-items'}) %>
+    <%- include('pane', {width: 9, content: 'you-floor-items'}) %>
 </div>

@@ -14,6 +14,7 @@ var dataer = function(context, data){
     context['_get'] = function(key){
         return new Promise(function(resolve, reject){
             data.findOne({ _id: key}, function(err, doc){
+                console.log('fetched: ',key, doc);
                 if (err || !doc)
                     reject(err);
                 else
